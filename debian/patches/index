@@ -1,5 +1,5 @@
 diff --git a/bin/pg_repack.c b/bin/pg_repack.c
-index 1bdceb5..be4a4aa 100644
+index 5bcee12..0c778d3 100644
 --- a/bin/pg_repack.c
 +++ b/bin/pg_repack.c
 @@ -256,6 +256,7 @@ static unsigned int		temp_obj_num = 0; /* temporary objects counter */
@@ -18,7 +18,7 @@ index 1bdceb5..be4a4aa 100644
  	{ 0 },
  };
  
-@@ -1305,7 +1307,8 @@ repack_one_table(repack_table *table, const char *orderby)
+@@ -1310,7 +1312,8 @@ repack_one_table(repack_table *table, const char *orderby)
  	indexparams[1] = moveidx ? tablespace : NULL;
  
  	/* First, just display a warning message for any invalid indexes
@@ -28,7 +28,7 @@ index 1bdceb5..be4a4aa 100644
  	 */
  	indexres = execute(
  		"SELECT pg_get_indexdef(indexrelid)"
-@@ -1316,7 +1319,12 @@ repack_one_table(repack_table *table, const char *orderby)
+@@ -1321,7 +1324,12 @@ repack_one_table(repack_table *table, const char *orderby)
  	{
  		const char *indexdef;
  		indexdef = getstr(indexres, j, 0);
@@ -43,7 +43,7 @@ index 1bdceb5..be4a4aa 100644
  
  	indexres = execute(
 diff --git a/doc/pg_repack.rst b/doc/pg_repack.rst
-index b79f0bd..9004c76 100644
+index ec15e0d..50706c2 100644
 --- a/doc/pg_repack.rst
 +++ b/doc/pg_repack.rst
 @@ -106,37 +106,38 @@ Usage
@@ -194,15 +194,15 @@ index 3d77a98..37a30d7 100644
  		c_nulls[i] = (nulls[i] ? 'n' : ' ');
  
 diff --git a/regress/Makefile b/regress/Makefile
-index 093077f..3aa8891 100644
+index b8d4fba..760fd2c 100644
 --- a/regress/Makefile
 +++ b/regress/Makefile
 @@ -17,7 +17,7 @@ INTVERSION := $(shell echo $$(($$(echo $(VERSION).0 | sed 's/\([[:digit:]]\{1,\}
  # Test suite
  #
  
--REGRESS := init-extension repack-setup repack-run after-schema repack-check nosuper tablespace issue3
-+REGRESS := init-extension repack-setup repack-run error-on-invalid-idx after-schema repack-check nosuper tablespace issue3
+-REGRESS := init-extension repack-setup repack-run after-schema repack-check nosuper tablespace get_order_by
++REGRESS := init-extension repack-setup repack-run error-on-invalid-idx after-schema repack-check nosuper tablespace get_order_by
  
  USE_PGXS = 1	# use pgxs if not in contrib directory
  PGXS := $(shell $(PG_CONFIG) --pgxs)
@@ -262,4 +262,3 @@ index 0000000..060f11d
 +\! pg_repack --dbname=contrib_regression --table=tbl_cluster --error-on-invalid-index
 +\! pg_repack --dbname=contrib_regression --table=tbl_badindex --error-on-invalid-index
 +\! pg_repack --dbname=contrib_regression --error-on-invalid-index
-
