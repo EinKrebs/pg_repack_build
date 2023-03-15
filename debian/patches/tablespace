@@ -1,0 +1,43 @@
+The tests expect a tablespace to exists, we let the tests create it
+
+--- a/regress/sql/tablespace.sql
++++ b/regress/sql/tablespace.sql
+@@ -6,6 +6,8 @@ SET client_min_messages = warning;
+ -- Note: in order to pass this test you must create a tablespace called 'testts'
+ --
+ 
++CREATE TABLESPACE testts LOCATION '/tmp/pg-repack-tablespace';
++
+ SELECT spcname FROM pg_tablespace WHERE spcname = 'testts';
+ -- If the query above failed you must create the 'testts' tablespace;
+ 
+--- a/regress/expected/tablespace.out
++++ b/regress/expected/tablespace.out
+@@ -4,6 +4,7 @@ SET client_min_messages = warning;
+ --
+ -- Note: in order to pass this test you must create a tablespace called 'testts'
+ --
++CREATE TABLESPACE testts LOCATION '/tmp/pg-repack-tablespace';
+ SELECT spcname FROM pg_tablespace WHERE spcname = 'testts';
+  spcname 
+ ---------
+--- a/regress/expected/tablespace_1.out
++++ b/regress/expected/tablespace_1.out
+@@ -4,6 +4,7 @@ SET client_min_messages = warning;
+ --
+ -- Note: in order to pass this test you must create a tablespace called 'testts'
+ --
++CREATE TABLESPACE testts LOCATION '/tmp/pg-repack-tablespace';
+ SELECT spcname FROM pg_tablespace WHERE spcname = 'testts';
+  spcname 
+ ---------
+--- a/regress/expected/tablespace_2.out
++++ b/regress/expected/tablespace_2.out
+@@ -4,6 +4,7 @@ SET client_min_messages = warning;
+ --
+ -- Note: in order to pass this test you must create a tablespace called 'testts'
+ --
++CREATE TABLESPACE testts LOCATION '/tmp/pg-repack-tablespace';
+ SELECT spcname FROM pg_tablespace WHERE spcname = 'testts';
+  spcname 
+ ---------

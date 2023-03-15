@@ -1,0 +1,265 @@
+diff --git a/bin/pg_repack.c b/bin/pg_repack.c
+index 1bdceb5..be4a4aa 100644
+--- a/bin/pg_repack.c
++++ b/bin/pg_repack.c
+@@ -256,6 +256,7 @@ static unsigned int		temp_obj_num = 0; /* temporary objects counter */
+ static bool				no_kill_backend = false; /* abandon when timed-out */
+ static bool				no_superuser_check = false;
+ static SimpleStringList	exclude_extension_list = {NULL, NULL}; /* don't repack tables of these extensions */
++static bool 			error_on_invalid_index = false; /* don't repack when invalid index is found */
+ 
+ /* buffer should have at least 11 bytes */
+ static char *
+@@ -285,6 +286,7 @@ static pgut_option options[] =
+ 	{ 'b', 'D', "no-kill-backend", &no_kill_backend },
+ 	{ 'b', 'k', "no-superuser-check", &no_superuser_check },
+ 	{ 'l', 'C', "exclude-extension", &exclude_extension_list },
++	{ 'b', 'F', "error-on-invalid-index", &error_on_invalid_index },
+ 	{ 0 },
+ };
+ 
+@@ -1305,7 +1307,8 @@ repack_one_table(repack_table *table, const char *orderby)
+ 	indexparams[1] = moveidx ? tablespace : NULL;
+ 
+ 	/* First, just display a warning message for any invalid indexes
+-	 * which may be on the table (mostly to match the behavior of 1.1.8).
++	 * which may be on the table (mostly to match the behavior of 1.1.8),
++	 * if --error-on-invalid-index is not set
+ 	 */
+ 	indexres = execute(
+ 		"SELECT pg_get_indexdef(indexrelid)"
+@@ -1316,7 +1319,12 @@ repack_one_table(repack_table *table, const char *orderby)
+ 	{
+ 		const char *indexdef;
+ 		indexdef = getstr(indexres, j, 0);
+-		elog(WARNING, "skipping invalid index: %s", indexdef);
++		if (error_on_invalid_index) {
++			elog(ERROR, "Invalid index: %s", indexdef);
++			return;
++		} else {
++			elog(WARNING, "skipping invalid index: %s", indexdef);
++		}
+ 	}
+ 
+ 	indexres = execute(
+diff --git a/doc/pg_repack.rst b/doc/pg_repack.rst
+index b79f0bd..9004c76 100644
+--- a/doc/pg_repack.rst
++++ b/doc/pg_repack.rst
+@@ -106,37 +106,38 @@ Usage
+ The following options can be specified in ``OPTIONS``.
+ 
+ Options:
+-  -a, --all                 repack all databases
+-  -t, --table=TABLE         repack specific table only
+-  -I, --parent-table=TABLE  repack specific parent table and its inheritors
+-  -c, --schema=SCHEMA       repack tables in specific schema only
+-  -s, --tablespace=TBLSPC   move repacked tables to a new tablespace
+-  -S, --moveidx             move repacked indexes to *TBLSPC* too
+-  -o, --order-by=COLUMNS    order by columns instead of cluster keys
+-  -n, --no-order            do vacuum full instead of cluster
+-  -N, --dry-run             print what would have been repacked and exit
+-  -j, --jobs=NUM            Use this many parallel jobs for each table
+-  -i, --index=INDEX         move only the specified index
+-  -x, --only-indexes        move only indexes of the specified table
+-  -T, --wait-timeout=SECS   timeout to cancel other backends on conflict
+-  -D, --no-kill-backend     don't kill other backends when timed out
+-  -Z, --no-analyze          don't analyze at end
+-  -k, --no-superuser-check  skip superuser checks in client
+-  -C, --exclude-extension   don't repack tables which belong to specific extension
++  -a, --all                     repack all databases
++  -t, --table=TABLE             repack specific table only
++  -I, --parent-table=TABLE      repack specific parent table and its inheritors
++  -c, --schema=SCHEMA           repack tables in specific schema only
++  -s, --tablespace=TBLSPC       move repacked tables to a new tablespace
++  -S, --moveidx                 move repacked indexes to *TBLSPC* too
++  -o, --order-by=COLUMNS        order by columns instead of cluster keys
++  -n, --no-order                do vacuum full instead of cluster
++  -N, --dry-run                 print what would have been repacked and exit
++  -j, --jobs=NUM                Use this many parallel jobs for each table
++  -i, --index=INDEX             move only the specified index
++  -x, --only-indexes            move only indexes of the specified table
++  -T, --wait-timeout=SECS       timeout to cancel other backends on conflict
++  -D, --no-kill-backend         don't kill other backends when timed out
++  -Z, --no-analyze              don't analyze at end
++  -k, --no-superuser-check      skip superuser checks in client
++  -C, --exclude-extension       don't repack tables which belong to specific extension
++  -F, --error-on-invalid-index  don't repack when invalid index is found
+ 
+ Connection options:
+-  -d, --dbname=DBNAME       database to connect
+-  -h, --host=HOSTNAME       database server host or socket directory
+-  -p, --port=PORT           database server port
+-  -U, --username=USERNAME   user name to connect as
+-  -w, --no-password         never prompt for password
+-  -W, --password            force password prompt
++  -d, --dbname=DBNAME           database to connect
++  -h, --host=HOSTNAME           database server host or socket directory
++  -p, --port=PORT               database server port
++  -U, --username=USERNAME       user name to connect as
++  -w, --no-password             never prompt for password
++  -W, --password                force password prompt
+ 
+ Generic options:
+-  -e, --echo                echo queries
+-  -E, --elevel=LEVEL        set output message level
+-  --help                    show this help, then exit
+-  --version                 output version information, then exit
++  -e, --echo                    echo queries
++  -E, --elevel=LEVEL            set output message level
++  --help                        show this help, then exit
++  --version                     output version information, then exit
+ 
+ 
+ Reorg Options
+diff --git a/doc/pg_repack_jp.rst b/doc/pg_repack_jp.rst
+index b4ac5c5..35211a8 100644
+--- a/doc/pg_repack_jp.rst
++++ b/doc/pg_repack_jp.rst
+@@ -194,36 +194,38 @@ pg_repackもしくはpg_reorgの古いバージョンからのアップグレー
+   The following options can be specified in ``OPTIONS``.
+   
+   Options:
+-    -a, --all                 repack all databases
+-    -t, --table=TABLE         repack specific table only
+-    -I, --parent-table=TABLE  repack specific parent table and its inheritors
+-    -c, --schema=SCHEMA       repack tables in specific schema only
+-    -s, --tablespace=TBLSPC   move repacked tables to a new tablespace
+-    -S, --moveidx             move repacked indexes to *TBLSPC* too
+-    -o, --order-by=COLUMNS    order by columns instead of cluster keys
+-    -n, --no-order            do vacuum full instead of cluster
+-    -N, --dry-run             print what would have been repacked and exit
+-    -j, --jobs=NUM            Use this many parallel jobs for each table
+-    -i, --index=INDEX         move only the specified index
+-    -x, --only-indexes        move only indexes of the specified table
+-    -T, --wait-timeout=SECS   timeout to cancel other backends on conflict
+-    -D, --no-kill-backend     don't kill other backends when timed out
+-    -Z, --no-analyze          don't analyze at end
+-    -k, --no-superuser-check  skip superuser checks in client
++    -a, --all                     repack all databases
++    -t, --table=TABLE             repack specific table only
++    -I, --parent-table=TABLE      repack specific parent table and its inheritors
++    -c, --schema=SCHEMA           repack tables in specific schema only
++    -s, --tablespace=TBLSPC       move repacked tables to a new tablespace
++    -S, --moveidx                 move repacked indexes to *TBLSPC* too
++    -o, --order-by=COLUMNS        order by columns instead of cluster keys
++    -n, --no-order                do vacuum full instead of cluster
++    -N, --dry-run                 print what would have been repacked and exit
++    -j, --jobs=NUM                Use this many parallel jobs for each table
++    -i, --index=INDEX             move only the specified index
++    -x, --only-indexes            move only indexes of the specified table
++    -T, --wait-timeout=SECS       timeout to cancel other backends on conflict
++    -D, --no-kill-backend         don't kill other backends when timed out
++    -Z, --no-analyze              don't analyze at end
++    -k, --no-superuser-check      skip superuser checks in client
++    -C, --exclude-extension       don't repack tables which belong to specific extension
++    -F, --error-on-invalid-index  don't repack when invalid index is found
+   
+   Connection options:
+-    -d, --dbname=DBNAME       database to connect
+-    -h, --host=HOSTNAME       database server host or socket directory
+-    -p, --port=PORT           database server port
+-    -U, --username=USERNAME   user name to connect as
+-    -w, --no-password         never prompt for password
+-    -W, --password            force password prompt
++    -d, --dbname=DBNAME           database to connect
++    -h, --host=HOSTNAME           database server host or socket directory
++    -p, --port=PORT               database server port
++    -U, --username=USERNAME       user name to connect as
++    -w, --no-password             never prompt for password
++    -W, --password                force password prompt
+   
+   Generic options:
+-    -e, --echo                echo queries
+-    -E, --elevel=LEVEL        set output message level
+-    --help                    show this help, then exit
+-    --version                 output version information, then exit
++    -e, --echo                    echo queries
++    -E, --elevel=LEVEL            set output message level
++    --help                        show this help, then exit
++    --version                     output version information, then exit
+ 
+ 利用方法
+ ---------
+diff --git a/lib/pgut/pgut-spi.c b/lib/pgut/pgut-spi.c
+index 3d77a98..37a30d7 100644
+--- a/lib/pgut/pgut-spi.c
++++ b/lib/pgut/pgut-spi.c
+@@ -84,6 +84,7 @@ execute_with_args(int expected, const char *src, int nargs, Oid argtypes[], Datu
+ 	int		i;
+ 	char	c_nulls[FUNC_MAX_ARGS];
+ 
++	memset(c_nulls, 0, sizeof(c_nulls));
+ 	for (i = 0; i < nargs; i++)
+ 		c_nulls[i] = (nulls[i] ? 'n' : ' ');
+ 
+diff --git a/regress/Makefile b/regress/Makefile
+index 093077f..3aa8891 100644
+--- a/regress/Makefile
++++ b/regress/Makefile
+@@ -17,7 +17,7 @@ INTVERSION := $(shell echo $$(($$(echo $(VERSION).0 | sed 's/\([[:digit:]]\{1,\}
+ # Test suite
+ #
+ 
+-REGRESS := init-extension repack-setup repack-run after-schema repack-check nosuper tablespace issue3
++REGRESS := init-extension repack-setup repack-run error-on-invalid-idx after-schema repack-check nosuper tablespace issue3
+ 
+ USE_PGXS = 1	# use pgxs if not in contrib directory
+ PGXS := $(shell $(PG_CONFIG) --pgxs)
+diff --git a/regress/expected/error-on-invalid-idx.out b/regress/expected/error-on-invalid-idx.out
+new file mode 100644
+index 0000000..096abe0
+--- /dev/null
++++ b/regress/expected/error-on-invalid-idx.out
+@@ -0,0 +1,20 @@
++--
++-- do repack
++--
++\! pg_repack --dbname=contrib_regression --table=tbl_cluster --error-on-invalid-index
++INFO: repacking table "public.tbl_cluster"
++\! pg_repack --dbname=contrib_regression --table=tbl_badindex --error-on-invalid-index
++INFO: repacking table "public.tbl_badindex"
++ERROR: Invalid index: CREATE UNIQUE INDEX idx_badindex_n ON tbl_badindex USING btree (n)
++\! pg_repack --dbname=contrib_regression --error-on-invalid-index
++INFO: repacking table "public.tbl_badindex"
++ERROR: Invalid index: CREATE UNIQUE INDEX idx_badindex_n ON tbl_badindex USING btree (n)
++INFO: repacking table "public.tbl_cluster"
++INFO: repacking table "public.tbl_gistkey"
++INFO: repacking table "public.tbl_idxopts"
++INFO: repacking table "public.tbl_only_pkey"
++INFO: repacking table "public.tbl_order"
++INFO: repacking table "public.tbl_with_dropped_column"
++INFO: repacking table "public.tbl_with_dropped_toast"
++INFO: repacking table "public.tbl_with_mod_column_storage"
++INFO: repacking table "public.tbl_with_toast"
+diff --git a/regress/expected/error-on-invalid-idx_1.out b/regress/expected/error-on-invalid-idx_1.out
+new file mode 100644
+index 0000000..ac1faa4
+--- /dev/null
++++ b/regress/expected/error-on-invalid-idx_1.out
+@@ -0,0 +1,11 @@
++--
++-- do repack
++--
++\! pg_repack --dbname=contrib_regression --table=tbl_cluster --error-on-invalid-index
++INFO: repacking table "public.tbl_cluster"
++\! pg_repack --dbname=contrib_regression --table=tbl_badindex --error-on-invalid-index
++INFO: repacking table "public.tbl_badindex"
++ERROR: Invalid index: CREATE UNIQUE INDEX idx_badindex_n ON public.tbl_badindex USING btree (n)
++\! pg_repack --dbname=contrib_regression --error-on-invalid-index
++INFO: repacking table "public.tbl_badindex"
++ERROR: Invalid index: CREATE UNIQUE INDEX idx_badindex_n ON public.tbl_badindex USING btree (n)
+diff --git a/regress/sql/error-on-invalid-idx.sql b/regress/sql/error-on-invalid-idx.sql
+new file mode 100644
+index 0000000..060f11d
+--- /dev/null
++++ b/regress/sql/error-on-invalid-idx.sql
+@@ -0,0 +1,7 @@
++--
++-- do repack
++--
++
++\! pg_repack --dbname=contrib_regression --table=tbl_cluster --error-on-invalid-index
++\! pg_repack --dbname=contrib_regression --table=tbl_badindex --error-on-invalid-index
++\! pg_repack --dbname=contrib_regression --error-on-invalid-index
+

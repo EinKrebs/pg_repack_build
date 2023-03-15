@@ -1,0 +1,26 @@
+From 2e92e68d5c1ceda58fbe63bb292720dce26a6c38 Mon Sep 17 00:00:00 2001
+From: denchick <denchick@yandex-team.ru>
+Date: Mon, 4 Jul 2022 14:59:15 +0500
+Subject: it does not require superuser
+
+---
+ lib/repack.c | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/lib/repack.c b/lib/repack.c
+index 96660c0..920f385 100644
+--- a/lib/repack.c
++++ b/lib/repack.c
+@@ -104,8 +104,6 @@ static void swap_heap_or_index_files(Oid r1, Oid r2);
+ static void
+ must_be_superuser(const char *func)
+ {
+-	if (!superuser())
+-		elog(ERROR, "must be superuser to use %s function", func);
+ }
+ 
+ 
+-- 
+2.33.0
+
+
