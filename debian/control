@@ -1,0 +1,12 @@
+Source: PACKAGE_NAME
+Section: database
+Priority: extra
+Maintainer: denchick <denchick@yandex-team.ru>
+Standards-Version: 2.3.1
+Build-Depends: debhelper (>= 9), postgresql-server-dev-POSTGRES_VERSION
+Homepage: https://github.com/timescale/timescaledb
+
+Package: PACKAGE_NAME
+Architecture: any
+Depends: \${shlibs:Depends}, \${misc:Depends}
+Description: An open-source time-series SQL database optimized for fast ingest and complex queries. Packaged as a PostgreSQL extension.
