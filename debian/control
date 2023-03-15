@@ -8,5 +8,5 @@ Homepage: https://github.com/timescale/timescaledb
 
 Package: PACKAGE_NAME
 Architecture: any
-Depends: \${shlibs:Depends}, \${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: An open-source time-series SQL database optimized for fast ingest and complex queries. Packaged as a PostgreSQL extension.
