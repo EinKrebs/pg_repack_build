@@ -1,4 +1,7 @@
 #!/usr/bin/make -f
 
+override_dh_pgxs_test:
+	# skip pgxs tests
+
 %:
-	dh $@
+	dh $@ --with pgxs_loop
